@@ -122,8 +122,8 @@ tests/                         # validations and key-number checks
 
 | Release | Milestone | Content |
 |---|---|---|
-| v0.1 | Sprint 1 (ends 22 Nov 2026) | Synthetic base, SQL spend analysis, market intelligence notebook |
-| v1.0 | Sprint 2 (ends 6 Dec 2026) | Should-cost model, clause backtest, Kraljic, TCO, playbook, Power BI dashboard, memo, case study |
+| v0.1 | Sprint 1 (ends 6 Dec 2026) | Synthetic base, SQL spend analysis, market intelligence notebook |
+| v1.0 | Sprint 2 (ends 20 Dec 2026) | Should-cost model, clause backtest, Kraljic, TCO, playbook, Power BI dashboard, memo, case study |
 
 ## 10. Assumptions and risks
 
