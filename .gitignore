@@ -223,3 +223,8 @@ __marimo__/
 # raw data stays local
 data/raw/*
 !data/raw/.gitkeep
+
+# generated, reproducible with python -m src.generate.purchasing
+data/processed/*.duckdb
+data/processed/*.duckdb.wal
+data/processed/generator_truth.json

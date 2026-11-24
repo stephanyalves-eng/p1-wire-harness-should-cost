@@ -38,6 +38,9 @@ Import duty (II) for each code: **to be confirmed in the TEC in force** (Resolu√
 
 ## Data
 
+- **Synthetic purchasing base** for a fictional automaker: 60 suppliers, 300 materials, about 5,500 purchase order lines over 24 months and 300 RFQs with 3 quotes each, about USD 53 M of spend per year. Prices are built bottom-up from copper, other material and conversion cost; three suppliers carry a hidden markup. Every assumption is listed in [docs/assumptions.md](docs/assumptions.md).
+- Public sources and extraction dates are logged in [data/README.md](data/README.md).
+
 ## Method
 
 ## Limitations
@@ -49,6 +52,7 @@ python -m venv .venv
 source .venv/Scripts/activate   # Windows Git Bash; use .venv/bin/activate on macOS/Linux
 pip install -r requirements.txt
 nbstripout --install            # once per clone: strips notebook outputs on commit
+python -m src.generate.purchasing   # builds data/processed/purchasing.duckdb
 ```
 
 Before committing:
