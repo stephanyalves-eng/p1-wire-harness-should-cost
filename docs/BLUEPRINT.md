@@ -65,14 +65,19 @@ flowchart LR
 
 **DuckDB schema (issue #3)**
 
+Defined in [`sql/schema.sql`](../sql/schema.sql) and created by `src/db.py`. Primary keys, foreign keys and value checks are enforced by the database.
+
 | Table | Grain | Key columns |
 |---|---|---|
-| `suppliers` | 1 row per supplier (60) | supplier_id, country, lead_time_days, ppm, is_overpriced (hidden truth) |
-| `materials` | 1 row per part (300) | material_id, family, ncm, copper_g_per_unit, single_source |
-| `purchase_orders` | 1 row per PO line (~5,000, 24 months) | po_id, material_id, supplier_id, order_date, qty, unit_price_usd |
-| `quotes` | 3 quotes per RFQ | rfq_id, material_id, supplier_id, quote_date, unit_price_usd |
-| `market_monthly` | 1 row per month × NCM × country | month, ncm, country, usd_fob, kg, implied_usd_kg |
+| `suppliers` | 1 row per supplier (60) | supplier_id, country, lead_time_days, ppm |
+| `materials` | 1 row per part (300) | material_id, family, ncm (3 codes in scope), copper_g_per_unit, single_source |
+| `purchase_orders` | 1 row per PO line (~5,000, 24 months) | (po_id, po_line), material_id, supplier_id, order_date, delivery_date, qty, unit_price_usd |
+| `quotes` | 1 row per supplier per RFQ, 3 per RFQ | (rfq_id, supplier_id), material_id, quote_date, unit_price_usd |
+| `market_monthly` | 1 row per month × NCM × country | month, ncm, country, usd_fob, kg_net, qty_stat |
 | `copper_monthly` | 1 row per month | month, copper_usd_t |
+| `fx_daily` | 1 row per day | day, usd_brl |
+
+The generator's hidden truth (which suppliers are overpriced) is not stored in the database, so the analysis cannot read it; it is saved beside the generator output for the truth-recovery test. Implied prices (USD/kg, USD/unit) are computed in queries, not stored.
 
 ## 6. Method by stage
 
