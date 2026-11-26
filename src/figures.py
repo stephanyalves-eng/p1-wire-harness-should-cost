@@ -159,12 +159,57 @@ def harness_calibration(con) -> pd.DataFrame:
     return out
 
 
+def supplier_gap(con) -> plt.Figure:
+    from src.gap import MATERIALITY, supplier_gaps
+
+    g = supplier_gaps(con).head(15).iloc[::-1]
+    colors = ["tab:red" if f else "tab:grey" for f in g["flagged"]]
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.barh(g["supplier_id"] + " (" + g["country"] + ")", g["gap"], color=colors)
+    ax.axvline(MATERIALITY, ls="--", lw=0.8, color="black")
+    ax.text(MATERIALITY, len(g) - 0.45, " 10% materiality", fontsize=8, va="bottom")
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
+    ax.set(
+        xlabel="Price above should-cost, spend-weighted",
+        title="Suppliers with the largest gap (red: flagged as overpriced)",
+    )
+    ax.tick_params(axis="y", labelsize=8)
+    return fig
+
+
+def cost_tornado(con) -> plt.Figure:
+    from src.gap import tornado
+    from src.should_cost import BY_FAMILY
+
+    copper = con.execute(
+        "SELECT avg(copper_usd_t) FROM (SELECT copper_usd_t FROM copper_monthly "
+        "ORDER BY month DESC LIMIT 12)"
+    ).fetchone()[0]
+    t = tornado(BY_FAMILY["harness_body"], copper, "BR").iloc[::-1]
+    base = t["base"].iloc[0]
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.barh(t["driver"], t["low"] / base - 1, color="tab:green", label="driver down")
+    ax.barh(t["driver"], t["high"] / base - 1, color="tab:red", label="driver up")
+    ax.axvline(0, color="black", lw=0.8)
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
+    ax.set(
+        xlabel="Change in should-cost",
+        title=f"Body harness made in Brazil: ±20% per cost driver, ±3 points per rate "
+        f"(base USD {base:.0f})",
+    )
+    ax.title.set_fontsize(10)
+    ax.legend(**LEGEND_BELOW)
+    return fig
+
+
 FIGURES = {
     "spend_by_family": spend_by_family,
     "abc_pareto": abc_pareto,
     "harness_price_vs_copper": harness_price_vs_copper,
     "origin_hhi": origin_hhi,
     "should_cost_calibration": should_cost_calibration,
+    "supplier_gap": supplier_gap,
+    "cost_tornado": cost_tornado,
 }
 
 
