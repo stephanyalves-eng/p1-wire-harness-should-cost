@@ -14,21 +14,23 @@ class Family:
     ncm: str
     n_materials: int
     copper_g: float  # mean copper content per unit, grams
-    conversion_usd: float  # labour, machine time and overhead per unit
+    labor_min: float  # true labour minutes per unit at the family's mean size
     other_material_usd: float  # insulation, terminals, housings, tape per unit
     units_per_vehicle: float  # across all variants of the family
     ev_only: bool = False
 
 
+# The "true" costs behind supplier prices. They sit close to, but not on, the analyst's
+# should-cost premises in src/should_cost.py, so the model has a realistic error to show.
 FAMILIES = (
-    Family("harness_engine", "harness", "85443000", 25, 600, 18.0, 12.0, 1),
-    Family("harness_body", "harness", "85443000", 30, 1200, 30.0, 20.0, 1),
-    Family("harness_instrument_panel", "harness", "85443000", 25, 900, 24.0, 16.0, 1),
-    Family("harness_door", "harness", "85443000", 25, 250, 6.0, 4.0, 4),
-    Family("harness_hv_battery", "harness", "85443000", 15, 3500, 90.0, 60.0, 1, ev_only=True),
-    Family("connector_signal", "connector", "85366990", 90, 3, 0.15, 0.10, 120),
-    Family("connector_power", "connector", "85366990", 60, 25, 0.60, 0.40, 20),
-    Family("connector_hv_shielded", "connector", "85366910", 30, 120, 6.0, 4.0, 3, ev_only=True),
+    Family("harness_engine", "harness", "85443000", 25, 600, 50, 11.0, 1),
+    Family("harness_body", "harness", "85443000", 30, 1200, 80, 19.0, 1),
+    Family("harness_instrument_panel", "harness", "85443000", 25, 900, 62, 15.0, 1),
+    Family("harness_door", "harness", "85443000", 25, 250, 16, 3.8, 4),
+    Family("harness_hv_battery", "harness", "85443000", 15, 3500, 130, 58.0, 1, ev_only=True),
+    Family("connector_signal", "connector", "85366990", 90, 3, 0.28, 0.09, 120),
+    Family("connector_power", "connector", "85366990", 60, 25, 0.85, 0.37, 20),
+    Family("connector_hv_shielded", "connector", "85366910", 30, 120, 6.5, 3.7, 3, ev_only=True),
 )
 
 
@@ -63,9 +65,22 @@ class Config:
     single_source_share: float = 0.20
     max_suppliers_per_material: int = 3
 
-    # Pricing: price = (copper + other material + conversion) x (1 + margin) x supplier factor
+    # Pricing: price = (copper + other material + labour x (1 + overhead)) x (1 + margin)
+    #                  x supplier factor x order noise, with labour priced in the supplier's country
     copper_lag_months: int = 3
     copper_scrap_rate: float = 0.05
+    labor_usd_h: dict = field(
+        default_factory=lambda: {
+            "BR": 9.5,
+            "MX": 8.5,
+            "CN": 7.5,
+            "DE": 46.0,
+            "US": 40.0,
+            "JP": 36.0,
+            "KR": 31.0,
+        }
+    )
+    overhead_on_labor: float = 0.18
     margin: float = 0.12
     supplier_factor_sd: float = 0.02  # normal pricing spread between suppliers
     price_noise_sd: float = 0.02  # order-to-order noise

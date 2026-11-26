@@ -2,8 +2,11 @@
 
 Prices are built bottom-up so the should-cost model has something real to recover:
 
-    unit price = (copper cost, lagged + other material + conversion) x (1 + margin)
-                 x supplier factor x order noise
+    unit price = (copper cost, lagged + other material + labour x (1 + overhead))
+                 x (1 + margin) x supplier factor x order noise
+
+Labour is priced at the supplier's country rate, so a German harness costs more than a
+Chinese one, as in the import data.
 
 Three suppliers carry a hidden markup. That truth is returned in `Base.truth` and written to
 a JSON file beside the database, never into it, so the analysis has to find them on its own.
@@ -32,6 +35,7 @@ class Base:
     quotes: pd.DataFrame
     supplier_kind: pd.DataFrame  # harness or connector; not stored in the database
     truth: dict
+    material_costs: pd.DataFrame  # true labour minutes and other material; not stored either
 
 
 def months(cfg: Config) -> pd.DatetimeIndex:
@@ -91,7 +95,7 @@ def _materials(cfg: Config, rng: np.random.Generator) -> pd.DataFrame:
                     "ncm": fam.ncm,
                     "description": f"{fam.name.replace('_', ' ')} variant {k + 1:02d}",
                     "copper_g_per_unit": round(fam.copper_g * size[k], 1),
-                    "conversion_usd": fam.conversion_usd * size[k],
+                    "labor_min": fam.labor_min * size[k],
                     "other_material_usd": fam.other_material_usd * size[k],
                     "annual_volume": fam.units_per_vehicle * vehicles * mix[k],
                 }
@@ -122,9 +126,11 @@ def _assign(cfg, rng, mat, kind) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _unit_price(cfg, mat_row, factor, copper_usd_t, noise):
+def unit_price(cfg, mat_row, country, factor, copper_usd_t, noise=0.0):
+    """True price of one unit of a generated material from a supplier in `country`."""
     copper = copper_usd_t / 1e6 * mat_row.copper_g_per_unit * (1 + cfg.copper_scrap_rate)
-    cost = copper + mat_row.other_material_usd + mat_row.conversion_usd
+    labor = mat_row.labor_min / 60 * cfg.labor_usd_h[country] * (1 + cfg.overhead_on_labor)
+    cost = copper + mat_row.other_material_usd + labor
     return cost * (1 + cfg.margin) * factor * (1 + noise)
 
 
@@ -150,12 +156,13 @@ def generate(cfg: Config = DEFAULT, copper: pd.Series | None = None) -> Base:
         factor[s] *= 1 + markup
 
     # Ordering cadence by expected annual spend rank.
-    base_price = mat.apply(lambda r: _unit_price(cfg, r, 1.0, copper.iloc[0], 0.0), axis=1)
+    base_price = mat.apply(lambda r: unit_price(cfg, r, "BR", 1.0, copper.iloc[0]), axis=1)
     rank = (mat["annual_volume"] * base_price).rank(ascending=False, method="first") / len(mat)
     cuts = np.cumsum([c[0] for c in cfg.cadence])
     mat["cadence"] = [cfg.cadence[int(np.searchsorted(cuts, r))][1] for r in rank]
 
     lead = suppliers.set_index("supplier_id")["lead_time_days"]
+    country = suppliers.set_index("supplier_id")["country"]
     by_id = mat.set_index("material_id")
     window = months(cfg)
     lines = []
@@ -180,7 +187,10 @@ def generate(cfg: Config = DEFAULT, copper: pd.Series | None = None) -> Base:
                     "delivery_date": delivery,
                     "qty": max(1, round(qty)),
                     "unit_price_usd": round(
-                        _unit_price(cfg, m, factor[p.supplier_id], lagged, noise), 4
+                        unit_price(
+                            cfg, m, country[p.supplier_id], factor[p.supplier_id], lagged, noise
+                        ),
+                        4,
                     ),
                     "month": month,
                 }
@@ -215,7 +225,9 @@ def generate(cfg: Config = DEFAULT, copper: pd.Series | None = None) -> Base:
         quote_date = month + pd.Timedelta(days=int(rng.integers(0, 28)))
         lagged = copper.loc[month - pd.DateOffset(months=cfg.copper_lag_months)]
         for s in bidders[: cfg.quotes_per_rfq]:
-            price = _unit_price(cfg, m, factor[s], lagged, rng.normal(0, cfg.price_noise_sd))
+            price = unit_price(
+                cfg, m, country[s], factor[s], lagged, rng.normal(0, cfg.price_noise_sd)
+            )
             quotes.append(
                 {
                     "rfq_id": f"RFQ{n:04d}",
@@ -245,7 +257,8 @@ def generate(cfg: Config = DEFAULT, copper: pd.Series | None = None) -> Base:
         "po_lines": len(po),
         "total_spend_usd": float((po["qty"] * po["unit_price_usd"]).sum()),
     }
-    return Base(suppliers, materials, po, pd.DataFrame(quotes), kind, truth)
+    costs = mat[["material_id", "copper_g_per_unit", "labor_min", "other_material_usd"]]
+    return Base(suppliers, materials, po, pd.DataFrame(quotes), kind, truth, costs)
 
 
 def load(con: duckdb.DuckDBPyConnection, base: Base) -> None:
