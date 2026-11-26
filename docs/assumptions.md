@@ -64,10 +64,13 @@ vehicle's total wiring. Conversion and other material costs are set so that copp
 
 ## Copper price
 
-Until the World Bank Pink Sheet series is loaded into `copper_monthly`, the generator uses a
-seeded random walk starting at USD 9,300/t (drift 0.3% and volatility 5% per month) and records
-`"copper_source": "synthetic"` in the truth file. Once the real series is loaded, regenerating
-the base uses it automatically.
+The generator prices orders with the real World Bank Pink Sheet copper series when it is
+loaded in `copper_monthly` (`python -m src.data.download_pinksheet`), and records
+`"copper_source": "provided"` in the truth file. Over the lagged window (Aug 2024 to Jul 2026)
+copper ran from USD 8,916/t to USD 13,552/t.
+
+Without that table, for example in tests and CI, it falls back to a seeded random walk starting
+at USD 9,300/t (drift 0.3% and volatility 5% per month) and records `"copper_source": "synthetic"`.
 
 ## Hidden truth
 
