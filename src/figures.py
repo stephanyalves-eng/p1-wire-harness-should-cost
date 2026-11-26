@@ -226,6 +226,41 @@ def clause_backtest(con) -> plt.Figure:
     return fig
 
 
+def kraljic_matrix(con) -> plt.Figure:
+    from src.strategy import LABELS, RISK_THRESHOLD, material_risk
+
+    m = material_risk(con)
+    colors = {
+        "strategic": "tab:red",
+        "leverage": "tab:blue",
+        "bottleneck": "tab:orange",
+        "non_critical": "tab:grey",
+    }
+    fig, ax = plt.subplots(figsize=(8.5, 5))
+    for q, g in m.groupby("quadrant"):
+        share = g["spend_usd"].sum() / m["spend_usd"].sum()
+        ax.scatter(
+            g["spend_share"],
+            g["supply_risk"],
+            s=14,
+            alpha=0.7,
+            color=colors[q],
+            label=f"{LABELS[q]}: {len(g)} items, {share:.0%} of spend",
+        )
+    a_cut = m.loc[m["abc_class"] == "A", "spend_share"].min()
+    ax.axvline(a_cut, ls="--", lw=0.8, color="black")
+    ax.axhline(RISK_THRESHOLD, ls="--", lw=0.8, color="black")
+    ax.set_xscale("log")
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1, decimals=2))
+    ax.set(
+        xlabel="Profit impact: item's share of spend (log scale; right of the line = class A)",
+        ylabel="Supply risk (0–1)",
+        title="Kraljic matrix computed from the data, 300 materials",
+    )
+    ax.legend(**{**LEGEND_BELOW, "ncol": 2, "bbox_to_anchor": (0.5, -0.15)})
+    return fig
+
+
 FIGURES = {
     "spend_by_family": spend_by_family,
     "abc_pareto": abc_pareto,
@@ -235,6 +270,7 @@ FIGURES = {
     "supplier_gap": supplier_gap,
     "cost_tornado": cost_tornado,
     "clause_backtest": clause_backtest,
+    "kraljic_matrix": kraljic_matrix,
 }
 
 

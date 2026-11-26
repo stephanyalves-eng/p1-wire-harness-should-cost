@@ -36,7 +36,7 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ## Result
 
-*Status: spend baseline, market intelligence, should-cost, supplier gaps and the copper clause. Category strategy, TCO and recommendations come next.*
+*Status: spend baseline, market intelligence, should-cost, supplier gaps, the copper clause and category strategy. TCO, the negotiation playbook and the dashboard come next.*
 
 **Spend baseline (synthetic base, about USD 50 M per year).** Harnesses take 82% of spend; body harnesses alone are 23%. 104 of 300 materials (35%) make up 80% of spend, and single-source items are 20% of materials but 26% of spend.
 
@@ -76,6 +76,17 @@ A fixed annual price gives the buyer a certain budget and the lowest total cost,
 
 ![Copper clause backtest](reports/figures/clause_backtest.png)
 
+**Category strategy.** A Kraljic matrix computed from the data, not filled in by judgement: profit impact is ABC class A, supply risk is the mean of supplier concentration, lead time, import exposure outside Mercosur and origin concentration in Comex Stat. 56 items holding 52% of spend are **strategic**, almost all of them harnesses; connectors fall mostly in **bottleneck** and **non-critical**, small in spend but with real supply risk. Import exposure separates the two halves most: 93–96% of high-risk spend comes from outside Mercosur, against about 36% for low-risk items. 14 of 60 suppliers score as high risk; 7 of them, mainly German, Chinese and Korean suppliers that hold items alone, should get a second source. S023 is both flagged as overpriced and high risk, which makes it the first supplier to address.
+
+| Quadrant | Items | Share of spend | Action |
+|---|---|---|---|
+| Strategic | 56 | 52% | 3-year agreements with the quarterly copper clause; second source for single-source items; cost reviews against should-cost |
+| Leverage | 48 | 28% | Annual competitive RFQ against should-cost; consolidate volume |
+| Bottleneck | 90 | 10% | Safety stock sized to lead time; qualify an alternative or Mercosur source |
+| Non-critical | 106 | 9% | Catalogue or framework pricing; fewer suppliers |
+
+![Kraljic matrix](reports/figures/kraljic_matrix.png)
+
 Figures are regenerated from the database with `python -m src.figures`.
 
 ## Data
@@ -90,6 +101,7 @@ Figures are regenerated from the database with `python -m src.figures`.
 3. **Should-cost** ([notebooks/03_should_cost.ipynb](notebooks/03_should_cost.ipynb), [src/should_cost.py](src/should_cost.py)): cost tree per unit for every material and supplier, priced with the supplier country's labour cost, then landed in Brazil with freight and import duty (Mercosur origins duty-free). Calibrated against Comex Stat USD/kg by origin; premises are listed in [docs/assumptions.md](docs/assumptions.md).
 4. **Gaps and sensitivity** ([notebooks/04_gap.ipynb](notebooks/04_gap.ipynb), [src/gap.py](src/gap.py)): each PO line and quote is compared with its should-cost at the same date (copper lagged 3 months). A supplier is flagged when its spend-weighted gap is above 10% and more than two robust standard deviations (MAD) above the median supplier. Savings potential counts the last 12 months of spend above should-cost for material-supplier pairs above 10%. The tornado moves one driver at a time.
 5. **Copper clause backtest** ([notebooks/05_clause.ipynb](notebooks/05_clause.ipynb), [src/clause.py](src/clause.py)): the contract price is the should-cost at an index value of copper; four designs (fixed annual on December copper, monthly on the previous month, quarterly on the previous quarter's average, a ±5% band) are run on the Pink Sheet series from 2016. The supplier buys copper at spot, so its margin shows who carries the risk. Buyer metric: mean drift of the price from the January price; supplier metric: spread of its margin.
+6. **Category strategy** ([notebooks/06_strategy.ipynb](notebooks/06_strategy.ipynb), [src/strategy.py](src/strategy.py)): Kraljic per material, with impact from the ABC class and supply risk as the mean of four factors scaled 0–1 (high from 0.5); a supplier risk score from dependency on single-source items (35%), lead time (25%), quality in PPM (20%) and import exposure (20%); actions per quadrant and per supplier.
 
 ## Limitations
 
