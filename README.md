@@ -36,7 +36,7 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ## Result
 
-*Status: spend baseline, market intelligence and the should-cost model. Supplier gap analysis, clause backtest and recommendations come in v1.0.*
+*Status: spend baseline, market intelligence, should-cost and supplier gaps. The copper clause backtest, category strategy and recommendations come next.*
 
 **Spend baseline (synthetic base, about USD 50 M per year).** Harnesses take 82% of spend; body harnesses alone are 23%. 104 of 300 materials (35%) make up 80% of spend, and single-source items are 20% of materials but 26% of spend.
 
@@ -55,6 +55,14 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ![Harness should-cost vs. import price by origin](reports/figures/should_cost_calibration.png)
 
+**Supplier gaps.** Regular suppliers price a median 4.7% above should-cost. Three suppliers stand out on both tests used to flag overpricing, a gap above 10% and more than two robust standard deviations above the other suppliers: S019 (+21.6%), S032 (+18.5%) and S023 (+11.7%). Their quotes rank the same way. S042 (+10.6%) passes the materiality bar but not the outlier test, so it is a watch item, not a negotiation target. Bringing every material-supplier pair above 10% back to should-cost is worth about USD 0.83 M per year, 72% of it with the three flagged suppliers.
+
+![Suppliers with the largest gap](reports/figures/supplier_gap.png)
+
+**What moves the should-cost.** For a body harness made in Brazil, other material and copper are the largest drivers (±7–8% of should-cost for a ±20% change), followed by labour cost and labour minutes (±5.5%). Margin and SG&A move it ±2.8% for ±3 points. Negotiations should therefore start from the material bill and the copper index, not from margin.
+
+![Should-cost tornado](reports/figures/cost_tornado.png)
+
 Figures are regenerated from the database with `python -m src.figures`.
 
 ## Data
@@ -67,6 +75,7 @@ Figures are regenerated from the database with `python -m src.figures`.
 1. **Spend baseline** ([notebooks/01_spend.ipynb](notebooks/01_spend.ipynb)): spend cube by family, supplier country and year; ABC Pareto (A while cumulative spend before the item is under 80%, B under 95%); single-source exposure; purchase price variance against the last price paid. The SQL lives in [sql/views.sql](sql/views.sql), and `python -m src.validate` checks the base before any analysis.
 2. **Market intelligence** ([notebooks/02_market.ipynb](notebooks/02_market.ipynb)): Comex Stat implied import prices (USD/kg, and USD/unit for connectors), origin concentration (HHI) and the correlation of import prices with copper at lags of 0 to 6 months. Harness imports run at about USD 30/kg with Paraguay supplying close to half; month-to-month import prices barely follow copper, so the should-cost takes copper pass-through from its cost tree and calibrates on annual averages.
 3. **Should-cost** ([notebooks/03_should_cost.ipynb](notebooks/03_should_cost.ipynb), [src/should_cost.py](src/should_cost.py)): cost tree per unit for every material and supplier, priced with the supplier country's labour cost, then landed in Brazil with freight and import duty (Mercosur origins duty-free). Calibrated against Comex Stat USD/kg by origin; premises are listed in [docs/assumptions.md](docs/assumptions.md).
+4. **Gaps and sensitivity** ([notebooks/04_gap.ipynb](notebooks/04_gap.ipynb), [src/gap.py](src/gap.py)): each PO line and quote is compared with its should-cost at the same date (copper lagged 3 months). A supplier is flagged when its spend-weighted gap is above 10% and more than two robust standard deviations (MAD) above the median supplier. Savings potential counts the last 12 months of spend above should-cost for material-supplier pairs above 10%. The tornado moves one driver at a time.
 
 ## Limitations
 

@@ -1,11 +1,12 @@
 from datetime import date
 
+import pandas as pd
 import pytest
 
 from src.db import connect, create_schema
 from src.figures import FIGURES, render_all
 from src.generate.config import DEFAULT
-from src.generate.purchasing import generate, load
+from src.generate.purchasing import generate, load, synthetic_copper
 
 
 @pytest.fixture(scope="module")
@@ -23,10 +24,17 @@ def con():
         ]
         + [(m, "85366990", "China", 500.0, 10.0, 900.0) for m in months],
     )
+    # Copper for the market charts (2023 to mid-2024), then the generator's synthetic series,
+    # which covers the purchase orders and their 3-month lag.
+    early = pd.date_range("2023-01-01", "2024-07-01", freq="MS")
     con.executemany(
         "INSERT INTO copper_monthly VALUES (?, ?)",
-        [(date(2023, m, 1), 8000.0 + 10 * m) for m in range(1, 13)]
-        + [(m, 9000.0 + 50 * i) for i, m in enumerate(months)],
+        [(m.date(), 8000.0 + 20 * i) for i, m in enumerate(early)],
+    )
+    synthetic = synthetic_copper(DEFAULT)
+    con.executemany(
+        "INSERT INTO copper_monthly VALUES (?, ?)",
+        [(m.date(), float(v)) for m, v in synthetic.items()],
     )
     yield con
     con.close()
