@@ -55,6 +55,7 @@ source .venv/Scripts/activate   # Windows Git Bash; use .venv/bin/activate on ma
 pip install -r requirements.txt
 nbstripout --install            # once per clone: strips notebook outputs on commit
 python -m src.generate.purchasing   # builds data/processed/purchasing.duckdb
+python -m src.data.download_comexstat   # loads Comex Stat imports into market_monthly
 ```
 
 Before committing:
