@@ -36,7 +36,7 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ## Result
 
-*Status: spend baseline, market intelligence, should-cost and supplier gaps. The copper clause backtest, category strategy and recommendations come next.*
+*Status: spend baseline, market intelligence, should-cost, supplier gaps and the copper clause. Category strategy, TCO and recommendations come next.*
 
 **Spend baseline (synthetic base, about USD 50 M per year).** Harnesses take 82% of spend; body harnesses alone are 23%. 104 of 300 materials (35%) make up 80% of spend, and single-source items are 20% of materials but 26% of spend.
 
@@ -63,6 +63,19 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ![Should-cost tornado](reports/figures/cost_tornado.png)
 
+**Copper clause.** Four price-adjustment designs, backtested on real copper from 2016 to 2026 for a body harness made in Brazil:
+
+| Design | Budget drift in the year | Price changes in 10 years | Paid vs. monthly | Supplier margin: spread | Supplier margin: worst month |
+|---|---|---|---|---|---|
+| Fixed annual | 0.0% | 10 | −1.1% | 2.6 points | −0.5% |
+| Monthly pass-through | 2.0% | 128 | 0.0% | 1.0 point | 4.3% |
+| Quarterly, 3-month lag | 1.7% | 43 | −0.4% | 1.9 points | 2.1% |
+| ±5% band | 1.9% | 33 | 0.0% | 1.2 points | 4.2% |
+
+A fixed annual price gives the buyer a certain budget and the lowest total cost, but pushes all copper risk onto the supplier, whose yearly margin fell below 3% in 2021 and 2026 and went negative in December 2025. Monthly pass-through protects the supplier but moves the price every month. **Buyer's opening position: fixed annual. Supplier's: monthly pass-through. Recommended landing zone: quarterly adjustment on the previous quarter's average copper**, the design whose weaker side is least weak; the ±5% band is the alternative if the supplier insists on margin protection, at the cost of a little more budget drift. The same ranking holds for a harness made in China and for signal connectors.
+
+![Copper clause backtest](reports/figures/clause_backtest.png)
+
 Figures are regenerated from the database with `python -m src.figures`.
 
 ## Data
@@ -76,6 +89,7 @@ Figures are regenerated from the database with `python -m src.figures`.
 2. **Market intelligence** ([notebooks/02_market.ipynb](notebooks/02_market.ipynb)): Comex Stat implied import prices (USD/kg, and USD/unit for connectors), origin concentration (HHI) and the correlation of import prices with copper at lags of 0 to 6 months. Harness imports run at about USD 30/kg with Paraguay supplying close to half; month-to-month import prices barely follow copper, so the should-cost takes copper pass-through from its cost tree and calibrates on annual averages.
 3. **Should-cost** ([notebooks/03_should_cost.ipynb](notebooks/03_should_cost.ipynb), [src/should_cost.py](src/should_cost.py)): cost tree per unit for every material and supplier, priced with the supplier country's labour cost, then landed in Brazil with freight and import duty (Mercosur origins duty-free). Calibrated against Comex Stat USD/kg by origin; premises are listed in [docs/assumptions.md](docs/assumptions.md).
 4. **Gaps and sensitivity** ([notebooks/04_gap.ipynb](notebooks/04_gap.ipynb), [src/gap.py](src/gap.py)): each PO line and quote is compared with its should-cost at the same date (copper lagged 3 months). A supplier is flagged when its spend-weighted gap is above 10% and more than two robust standard deviations (MAD) above the median supplier. Savings potential counts the last 12 months of spend above should-cost for material-supplier pairs above 10%. The tornado moves one driver at a time.
+5. **Copper clause backtest** ([notebooks/05_clause.ipynb](notebooks/05_clause.ipynb), [src/clause.py](src/clause.py)): the contract price is the should-cost at an index value of copper; four designs (fixed annual on December copper, monthly on the previous month, quarterly on the previous quarter's average, a ±5% band) are run on the Pink Sheet series from 2016. The supplier buys copper at spot, so its margin shows who carries the risk. Buyer metric: mean drift of the price from the January price; supplier metric: spread of its margin.
 
 ## Limitations
 
