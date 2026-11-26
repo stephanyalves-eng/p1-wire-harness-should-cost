@@ -61,6 +61,10 @@ def _suppliers(cfg: Config, rng: np.random.Generator) -> tuple[pd.DataFrame, pd.
     shares = np.array([cfg.countries[c][0] for c in countries])
     picked = rng.choice(countries, size=cfg.n_suppliers, p=shares / shares.sum())
     lead = [rng.integers(*cfg.countries[c][1], endpoint=True) for c in picked]
+    hq = []
+    for c in picked:
+        groups = cfg.countries[c][2]
+        hq.append(rng.choice(list(groups), p=list(groups.values())))
     ids = [f"S{i:03d}" for i in range(1, cfg.n_suppliers + 1)]
     n_harness = round(cfg.n_suppliers * cfg.harness_supplier_share)
     suppliers = pd.DataFrame(
@@ -70,6 +74,7 @@ def _suppliers(cfg: Config, rng: np.random.Generator) -> tuple[pd.DataFrame, pd.
             "country": picked,
             "lead_time_days": np.array(lead, dtype=int),
             "ppm": rng.lognormal(np.log(cfg.ppm_median), 0.6, cfg.n_suppliers).round(1),
+            "hq_country": hq,
         }
     )
     kind = pd.DataFrame(

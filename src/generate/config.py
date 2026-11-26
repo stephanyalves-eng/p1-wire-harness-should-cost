@@ -47,16 +47,22 @@ class Config:
     # Supplier base
     n_suppliers: int = 60
     harness_supplier_share: float = 0.6  # the rest supply connectors
+    # Plant countries. Global harness groups (Japanese, German, US, Korean) build in low-cost
+    # plants close to their customers, so the plant, not the headquarters, sets labour cost,
+    # freight and import duty. A few specialised parts still come from high-wage plants.
     countries: dict = field(
         default_factory=lambda: {
-            # country: (share of suppliers, lead time range in days)
-            "BR": (0.40, (20, 35)),
-            "MX": (0.15, (30, 45)),
-            "CN": (0.15, (60, 90)),
-            "DE": (0.10, (45, 60)),
-            "US": (0.10, (35, 50)),
-            "JP": (0.05, (60, 80)),
-            "KR": (0.05, (60, 80)),
+            # plant: (share of suppliers, lead time range in days, {hq country: probability})
+            "BR": (0.30, (20, 35), {"BR": 0.5, "DE": 0.2, "JP": 0.2, "US": 0.1}),
+            "MX": (0.15, (30, 45), {"US": 0.4, "MX": 0.3, "JP": 0.2, "DE": 0.1}),
+            "CN": (0.15, (60, 90), {"CN": 0.6, "JP": 0.2, "KR": 0.1, "DE": 0.1}),
+            "PY": (0.12, (10, 20), {"JP": 0.4, "KR": 0.3, "BR": 0.3}),
+            "RO": (0.08, (40, 55), {"DE": 0.7, "US": 0.3}),
+            "MA": (0.07, (35, 50), {"DE": 0.5, "JP": 0.3, "US": 0.2}),
+            "DE": (0.05, (45, 60), {"DE": 1.0}),
+            "US": (0.04, (35, 50), {"US": 1.0}),
+            "JP": (0.02, (60, 80), {"JP": 1.0}),
+            "KR": (0.02, (60, 80), {"KR": 1.0}),
         }
     )
     ppm_median: float = 150.0
@@ -74,6 +80,9 @@ class Config:
             "BR": 9.5,
             "MX": 8.5,
             "CN": 7.5,
+            "PY": 6.5,
+            "RO": 9.0,
+            "MA": 4.5,
             "DE": 46.0,
             "US": 40.0,
             "JP": 36.0,

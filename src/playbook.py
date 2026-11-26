@@ -56,12 +56,15 @@ def zopa(con: duckdb.DuckDBPyConnection, supplier_id: str, since: date) -> dict:
         ratio = 1.0 if pd.isna(row["batna_tco"]) else min(1.0, row["batna_tco"] / row["tco"])
         walk += spend * ratio
     covered = float(pairs["batna_tco"].notna().mean()) if len(pairs) else 0.0
+    # Aim at should-cost, or lower if the best alternative already beats it.
+    aim = min(target, walk)
     return {
         "current": current,
         "walk_away": walk,
         "has_zopa": walk >= floor,
         "target": target,
-        "opening": target * (1 - OPENING_DISCOUNT),
+        "aim": aim,
+        "opening": max(floor, aim * (1 - OPENING_DISCOUNT)),
         "floor": floor,
         "materials": int(lines["material_id"].nunique()),
         "batna_coverage": covered,
@@ -93,6 +96,7 @@ def render(con: duckdb.DuckDBPyConnection, suppliers: list[str], since: date) ->
     materials = strategy.material_risk(con)
     pairs = tco.pair_tco(con, since)
     sup_tco = tco.supplier_tco(pairs).set_index("supplier_id")
+    hq = dict(con.execute("SELECT supplier_id, hq_country FROM suppliers").fetchall())
 
     out = [
         "# Negotiation playbook",
@@ -112,18 +116,19 @@ def render(con: duckdb.DuckDBPyConnection, suppliers: list[str], since: date) ->
         give, ask = _concessions(quadrants, r["tier"], bool(g["flagged"]))
         alternatives = pairs[pairs["supplier_id"] == s]["batna_supplier"].dropna().unique()
 
-        def pct(v):
-            return f"{v / z['current'] - 1:+.1%}"
+        def pct(v, base=z["current"]):
+            return f"{v / base - 1:+.1%}"
 
+        group = hq.get(s) or "unknown"
         out += [
-            f"## {s} ({g['country']})",
+            f"## {s} (plant in {g['country']}, {group} group)",
             "",
             f"- **Position:** {z['materials']} materials, USD {z['current']:,.0f} since "
             f"{since:%b %Y}; price {g['gap']:+.1%} over should-cost"
             f"{' (flagged as overpriced)' if g['flagged'] else ''}; TCO "
             f"{sup_tco.loc[s, 'tco_uplift']:+.1%} over price; risk score {r['risk_score']:.0f} "
             f"({r['tier']}).",
-            f"- **Quadrant mix:** "
+            "- **Quadrant mix:** "
             + ", ".join(f"{strategy.LABELS[q]} {v:.0%}" for q, v in quadrants.items())
             + ".",
             f"- **BATNA:** an alternative source exists for {z['batna_coverage']:.0%} of its "
@@ -131,11 +136,17 @@ def render(con: duckdb.DuckDBPyConnection, suppliers: list[str], since: date) ->
             f"worth it below a price of {pct(z['walk_away'])} vs today.",
         ]
         if z["has_zopa"]:
+            if z["aim"] < z["target"]:
+                aim = (
+                    f"Aim for the walk-away, {pct(z['aim'])}: the alternatives already beat "
+                    f"should-cost ({pct(z['target'])})"
+                )
+            else:
+                aim = f"Target {pct(z['target'])} (should-cost)"
             out += [
                 f"- **ZOPA:** from the supplier's floor at {pct(z['floor'])} to the buyer's "
-                f"walk-away at {pct(z['walk_away'])}. Target {pct(z['target'])} "
-                f"(should-cost, USD {z['current'] - z['target']:,.0f} below today); open at "
-                f"{pct(z['opening'])}.",
+                f"walk-away at {pct(z['walk_away'])}. {aim}, USD "
+                f"{z['current'] - z['aim']:,.0f} below today; open at {pct(z['opening'])}.",
                 "- **Concessions we can give:** " + "; ".join(give) + ".",
                 "- **What we ask for:** " + "; ".join(ask) + ".",
             ]

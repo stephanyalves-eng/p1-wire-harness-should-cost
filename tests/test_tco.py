@@ -43,7 +43,7 @@ def con():
         [(date(2025, m, 1), COPPER) for m in range(1, 13)],
     )
     con.executemany(
-        "INSERT INTO suppliers VALUES (?, ?, ?, 30, 100.0)",
+        "INSERT INTO suppliers VALUES (?, ?, ?, 30, 100.0, NULL)",
         [("S1", "Brazil A", "BR"), ("S2", "Mexico A", "MX")],
     )
     con.execute(
@@ -80,6 +80,18 @@ def test_zopa_bounds_are_ordered(con):
     assert z["target"] == pytest.approx(100 * should("BR")["ex_works"])
     assert z["current"] == pytest.approx(100 * should("BR")["ex_works"] * 1.20)
     assert z["floor"] <= z["target"] <= z["walk_away"] <= z["current"]
+
+
+def test_aim_and_opening_stay_inside_the_zone(con):
+    # Make S2 cheaper so the walk-away falls below should-cost but stays above the floor.
+    con.execute(
+        "UPDATE purchase_orders SET unit_price_usd = unit_price_usd * 0.85 WHERE supplier_id = 'S2'"
+    )
+    z = playbook.zopa(con, "S1", since=date(2025, 1, 1))
+    assert z["has_zopa"]
+    assert z["walk_away"] < z["target"]
+    assert z["aim"] == pytest.approx(z["walk_away"])
+    assert z["floor"] <= z["opening"] <= z["aim"]
 
 
 def test_no_zopa_when_the_alternative_beats_the_supplier_floor(con):

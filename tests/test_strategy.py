@@ -15,7 +15,7 @@ def con():
     con = connect(":memory:")
     create_schema(con)
     con.executemany(
-        "INSERT INTO suppliers VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO suppliers VALUES (?, ?, ?, ?, ?, NULL)",
         [
             ("S1", "China A", "CN", 72, 250.0),
             ("S2", "Brazil A", "BR", 27, 100.0),

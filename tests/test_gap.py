@@ -30,7 +30,7 @@ def con():
         [(date(2025, m, 1), COPPER) for m in range(1, 13)],
     )
     con.executemany(
-        "INSERT INTO suppliers VALUES (?, ?, 'BR', 30, 100.0)", [("S1", "A"), ("S2", "B")]
+        "INSERT INTO suppliers VALUES (?, ?, 'BR', 30, 100.0, NULL)", [("S1", "A"), ("S2", "B")]
     )
     con.execute(
         "INSERT INTO materials VALUES "

@@ -15,7 +15,9 @@ def con():
 
 
 def add_supplier(con, supplier_id="S001"):
-    con.execute("INSERT INTO suppliers VALUES (?, 'Supplier A', 'BR', 30, 250.0)", [supplier_id])
+    con.execute(
+        "INSERT INTO suppliers VALUES (?, 'Supplier A', 'BR', 30, 250.0, NULL)", [supplier_id]
+    )
 
 
 def add_material(con, material_id="M001", ncm="85443000", copper=120.0):

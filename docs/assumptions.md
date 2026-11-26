@@ -36,8 +36,8 @@ each variant is scaled by a size factor (lognormal, σ = 0.25).
 | Power connector | 8536.69.90 | 60 | 25 | 0.85 | 0.37 | 20 |
 | HV shielded connector (EV only) | 8536.69.10 | 30 | 120 | 6.5 | 3.70 | 3 |
 
-True fully loaded labour cost by supplier country, USD per hour: BR 9.5, MX 8.5, CN 7.5,
-DE 46, US 40, JP 36, KR 31. Overhead adds 18% to labour.
+True fully loaded labour cost by plant country, USD per hour: BR 9.5, MX 8.5, CN 7.5, PY 6.5,
+RO 9.0, MA 4.5, DE 46, US 40, JP 36, KR 31. Overhead adds 18% to labour.
 
 **To verify:** copper grams per family. The harness values add up to about 4 kg of copper per
 combustion vehicle and about 7 kg per EV across these five families, a fraction of the
@@ -50,13 +50,21 @@ for the main import origins in Comex Stat, and 35–80% above the should-cost. P
 the supplier's country brings low-cost origins to USD 25–26/kg and high-wage origins to
 USD 44–58/kg, in line with import prices by origin.
 
+**Plants, not headquarters (v1.0).** With every supplier producing in its home country, 48% of
+spend sat with German, US, Korean and Japanese plants that cost 50–60% more in TCO than the
+alternatives, which no real buyer would sustain. Global harness groups build in low-cost plants
+close to their customers, so each supplier now has a plant country (which sets labour, freight
+and import duty) and a headquarters country (context only). Most spend now comes from Brazil,
+Mexico, Romania, Paraguay, China and Morocco; high-wage plants keep about 16%.
+
 ## Suppliers
 
 | Assumption | Value | Why |
 |---|---|---|
 | Suppliers | 60: 36 harness makers, 24 connector makers | Each supplier sells only its own kind of part |
-| Country mix | BR 40%, MX 15%, CN 15%, DE 10%, US 10%, JP 5%, KR 5% | Local base plus typical import origins for the category |
-| Lead time | BR 20–35 d, MX 30–45, US 35–50, DE 45–60, CN 60–90, JP/KR 60–80 | Distance and transport mode |
+| Plant country mix | BR 30%, MX 15%, CN 15%, PY 12%, RO 8%, MA 7%, DE 5%, US 4%, JP 2%, KR 2% | Low-cost plants of global groups plus a local base; a few specialised high-wage plants |
+| Headquarters | Drawn per plant: e.g. Romania mostly German groups, Paraguay Japanese and Korean, Mexico US | Context for the playbook; does not affect cost |
+| Lead time | PY 10–20 d, BR 20–35, MX 30–45, MA 35–50, US 35–50, RO 40–55, DE 45–60, CN 60–90, JP/KR 60–80 | Distance and transport mode |
 | Quality | PPM lognormal, median 150 | Used later in TCO as cost of quality |
 
 ## Sourcing and pricing
@@ -123,10 +131,21 @@ The cost tree per unit, in [`src/should_cost.py`](../src/should_cost.py):
 Each material is scaled from its family by its own copper content.
 
 **Labour cost, USD per hour, to verify** against ILO or national statistics: BR 9, PY 6, AR 10,
-MX 8, CN 7, TH 6, IN 4, KR 30, JP 35, DE 45, US 38.
+MX 8, RO 8.5, MA 4, CN 7, TH 6, IN 4, KR 30, JP 35, DE 45, US 38.
 
-**Freight and insurance to the plant**, share of ex-works value: BR 2%, PY and AR 3%, MX, US and
-DE 5%, Asian origins 6%.
+**Freight and insurance to the plant**, share of ex-works value: BR 2%, PY and AR 3%, MX, US, DE,
+RO and MA 5%, Asian origins 6%.
+
+## TCO premises
+
+| Line | Rule |
+|---|---|
+| Landed | price × (1 + freight) × (1 + import duty outside Mercosur) |
+| Carrying | landed × 20% a year × (lead time + 15 days of safety stock) / 365 |
+| Quality | PPM / 1,000,000 × (landed + USD 200 to sort, rework and handle each defect) |
+
+The 20% carrying rate and the USD 200 per defect are **to verify** against the plant's own
+cost of capital and quality cost data.
 
 **Import duty** from [`data/reference/import_duty.csv`](../data/reference/import_duty.csv)
 (16% for 8544.30.00 and 8536.69.90, 14.4% for 8536.69.10), applied to the freight-inclusive
