@@ -70,7 +70,8 @@ def quadrant(frame: pd.DataFrame) -> pd.Series:
 
 def material_risk(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     """One row per material: spend, ABC class, the four risk factors, supply risk, quadrant."""
-    year = _market_year(con)
+    year = _market_year(con)  # None when no Comex Stat data is loaded: market factor is 0
+    year_filter = f"year = {int(year)}" if year is not None else "FALSE"
     mercosur = ", ".join(f"'{c}'" for c in sorted(MERCOSUR))
     df = con.execute(
         f"""
@@ -98,7 +99,7 @@ def material_risk(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
         ),
         market AS (
             SELECT ncm, hhi / 10000 AS market_concentration
-            FROM v_market_hhi WHERE year = {int(year)}
+            FROM v_market_hhi WHERE {year_filter}
         )
         SELECT a.material_id, a.family, m.ncm, a.spend_usd, a.spend_share, a.abc_class,
                c.suppliers, c.supplier_concentration, g.lead_time, g.import_exposure,
@@ -112,7 +113,7 @@ def material_risk(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     ).df()
     df["supply_risk"] = df[list(FACTORS)].mean(axis=1)
     df["quadrant"] = quadrant(df)
-    df.attrs["market_year"] = int(year)
+    df.attrs["market_year"] = int(year) if year is not None else None
     return df.sort_values("spend_usd", ascending=False).reset_index(drop=True)
 
 
