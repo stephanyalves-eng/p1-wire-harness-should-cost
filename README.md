@@ -43,6 +43,8 @@ Import duty (II) for each code: **to be confirmed in the TEC in force** (Resolu√
 
 ## Method
 
+1. **Spend baseline** ([notebooks/01_spend.ipynb](notebooks/01_spend.ipynb)): spend cube by family, supplier country and year; ABC Pareto (A while cumulative spend before the item is under 80%, B under 95%); single-source exposure; purchase price variance against the last price paid. The SQL lives in [sql/views.sql](sql/views.sql), and `python -m src.validate` checks the base before any analysis.
+
 ## Limitations
 
 ## How to run
