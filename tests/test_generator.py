@@ -3,7 +3,7 @@ import pytest
 
 from src.db import connect, create_schema
 from src.generate.config import DEFAULT, FAMILIES
-from src.generate.purchasing import generate, load, synthetic_copper
+from src.generate.purchasing import generate, load, synthetic_copper, unit_price
 
 
 @pytest.fixture(scope="module")
@@ -50,12 +50,30 @@ def test_three_overpriced_suppliers_in_range(base):
     assert all(0.08 <= markup <= 0.15 for markup in truth.values())
 
 
-def test_overpricing_is_visible_in_quotes(base):
-    """Quotes from overpriced suppliers sit above the RFQ median, so the analysis can find them."""
-    q = base.quotes.copy()
-    q["ratio"] = q["unit_price_usd"] / q.groupby("rfq_id")["unit_price_usd"].transform("median")
-    flagged = q[q["supplier_id"].isin(base.truth["overpriced_suppliers"])]
-    assert flagged["ratio"].mean() > 1.05
+def test_overpriced_suppliers_charge_cost_plus_their_markup(base):
+    """Prices over the true cost from the same country recover each supplier's hidden markup."""
+    copper = synthetic_copper(DEFAULT)
+    lag = pd.DateOffset(months=DEFAULT.copper_lag_months)
+    costs = base.material_costs.set_index("material_id")
+    country = base.suppliers.set_index("supplier_id")["country"]
+    po = base.purchase_orders
+    po = po.assign(
+        cost=[
+            unit_price(
+                DEFAULT,
+                costs.loc[r.material_id],
+                country[r.supplier_id],
+                1.0,
+                copper.loc[r.order_date.to_period("M").to_timestamp() - lag],
+            )
+            for r in po.itertuples()
+        ]
+    )
+    ratio = (po["unit_price_usd"] / po["cost"]).groupby(po["supplier_id"]).mean()
+    markups = base.truth["overpriced_suppliers"]
+    for supplier, markup in markups.items():
+        assert ratio[supplier] == pytest.approx(1 + markup, abs=0.04)
+    assert ratio.drop(list(markups)).between(0.94, 1.06).all()
 
 
 def test_prices_follow_copper_with_a_lag():

@@ -11,14 +11,11 @@ from pathlib import Path
 
 import duckdb
 import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+import pandas as pd
 
-matplotlib.use("Agg")  # render without a display
-
-import matplotlib.pyplot as plt  # noqa: E402
-import matplotlib.ticker as mtick  # noqa: E402
-import pandas as pd  # noqa: E402
-
-from src.db import DEFAULT_DB, ROOT, connect, create_schema  # noqa: E402
+from src.db import DEFAULT_DB, ROOT, connect, create_schema
 
 OUT_DIR = ROOT / "reports" / "figures"
 NCM_NAMES = {
@@ -113,11 +110,61 @@ def origin_hhi(con) -> plt.Figure:
     return fig
 
 
+def should_cost_calibration(con) -> plt.Figure:
+    calib = harness_calibration(con)
+    calib = calib.sort_values("import_usd_m", ascending=False)
+    x = range(len(calib))
+    fig, ax = plt.subplots(figsize=(9, 3.8))
+    ax.bar(
+        [i - 0.2 for i in x], calib["import_usd_kg"], width=0.4, label="Import price (Comex Stat)"
+    )
+    ax.bar([i + 0.2 for i in x], calib["should_cost_usd_kg"], width=0.4, label="Should-cost")
+    ax.set_xticks(list(x), calib["origin"], rotation=0, fontsize=8)
+    ax.set(
+        ylabel="USD/kg",
+        title=f"Harness should-cost vs. import price by origin, {calib.attrs['year']}",
+    )
+    ax.legend(**LEGEND_BELOW)
+    return fig
+
+
+def harness_calibration(con) -> pd.DataFrame:
+    """Should-cost vs. import price per kg by origin for the latest full year of imports."""
+    from src.should_cost import calibrate_harness  # local import: figures stay usable without it
+
+    year = con.execute(
+        """
+        SELECT max(y) FROM (
+            SELECT year(month) AS y FROM market_monthly WHERE ncm = '85443000'
+            GROUP BY 1 HAVING count(DISTINCT month) = 12
+        )
+        """
+    ).fetchone()[0]
+    market = _q(
+        con,
+        f"""
+        SELECT country, sum(usd_fob) AS usd_fob, sum(usd_fob) / sum(kg_net) AS usd_per_kg
+        FROM market_monthly WHERE ncm = '85443000' AND year(month) = {int(year)}
+        GROUP BY country ORDER BY usd_fob DESC LIMIT 10
+        """,
+    )
+    copper = con.execute(
+        f"""
+        SELECT avg(copper_usd_t) FROM copper_monthly
+        WHERE month BETWEEN DATE '{int(year) - 1}-10-01' AND DATE '{int(year)}-09-01'
+        """
+    ).fetchone()[0]
+    out = calibrate_harness(market, copper)
+    out.attrs["year"] = int(year)
+    return out
+
+
 FIGURES = {
     "spend_by_family": spend_by_family,
     "abc_pareto": abc_pareto,
     "harness_price_vs_copper": harness_price_vs_copper,
     "origin_hhi": origin_hhi,
+    "should_cost_calibration": should_cost_calibration,
 }
 
 
@@ -138,6 +185,7 @@ def main() -> None:
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--out", type=Path, default=OUT_DIR)
     args = parser.parse_args()
+    matplotlib.use("Agg")  # render without a display; set here so importing stays side-effect free
     con = connect(args.db)
     create_schema(con)
     for path in render_all(con, args.out):

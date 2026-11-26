@@ -36,9 +36,9 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ## Result
 
-*Status: v0.1, spend baseline and market intelligence. The should-cost model, clause backtest and recommendations come in v1.0.*
+*Status: spend baseline, market intelligence and the should-cost model. Supplier gap analysis, clause backtest and recommendations come in v1.0.*
 
-**Spend baseline (synthetic base, about USD 55 M per year).** Harnesses take 78% of spend; body harnesses alone are 21%. 114 of 300 materials (38%) make up 80% of spend, and single-source items are 20% of materials but 26% of spend.
+**Spend baseline (synthetic base, about USD 50 M per year).** Harnesses take 82% of spend; body harnesses alone are 23%. 104 of 300 materials (35%) make up 80% of spend, and single-source items are 20% of materials but 26% of spend.
 
 ![Annual spend by part family](reports/figures/spend_by_family.png)
 ![ABC Pareto](reports/figures/abc_pareto.png)
@@ -51,17 +51,22 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ![Concentration of import origins](reports/figures/origin_hhi.png)
 
+**Should-cost.** A bottom-up cost tree (copper, other material, labour by country, overhead, SG&A, margin, freight and import duty) lands within 3% of the 2025 import price per kg for Paraguay, Thailand and Germany, and within 12% for Japan. China, India and the small, likely more complex volumes from Mexico, the United States and Argentina import above the model. Connectors can't be calibrated on Comex Stat units, so their should-cost rests on the cost tree alone.
+
+![Harness should-cost vs. import price by origin](reports/figures/should_cost_calibration.png)
+
 Figures are regenerated from the database with `python -m src.figures`.
 
 ## Data
 
-- **Synthetic purchasing base** for a fictional automaker: 60 suppliers, 300 materials, about 5,500 purchase order lines over 24 months and 300 RFQs with 3 quotes each, about USD 55 M of spend per year. Prices are built bottom-up from the real copper price (World Bank Pink Sheet, lagged 3 months), other material and conversion cost; three suppliers carry a hidden markup. Every assumption is listed in [docs/assumptions.md](docs/assumptions.md).
+- **Synthetic purchasing base** for a fictional automaker: 60 suppliers, 300 materials, about 5,600 purchase order lines over 24 months and 300 RFQs with 3 quotes each, about USD 50 M of spend per year. Prices are built bottom-up from the real copper price (World Bank Pink Sheet, lagged 3 months), other material and labour priced in each supplier's country; three suppliers carry a hidden markup. Every assumption is listed in [docs/assumptions.md](docs/assumptions.md).
 - Public sources and extraction dates are logged in [data/README.md](data/README.md).
 
 ## Method
 
 1. **Spend baseline** ([notebooks/01_spend.ipynb](notebooks/01_spend.ipynb)): spend cube by family, supplier country and year; ABC Pareto (A while cumulative spend before the item is under 80%, B under 95%); single-source exposure; purchase price variance against the last price paid. The SQL lives in [sql/views.sql](sql/views.sql), and `python -m src.validate` checks the base before any analysis.
 2. **Market intelligence** ([notebooks/02_market.ipynb](notebooks/02_market.ipynb)): Comex Stat implied import prices (USD/kg, and USD/unit for connectors), origin concentration (HHI) and the correlation of import prices with copper at lags of 0 to 6 months. Harness imports run at about USD 30/kg with Paraguay supplying close to half; month-to-month import prices barely follow copper, so the should-cost takes copper pass-through from its cost tree and calibrates on annual averages.
+3. **Should-cost** ([notebooks/03_should_cost.ipynb](notebooks/03_should_cost.ipynb), [src/should_cost.py](src/should_cost.py)): cost tree per unit for every material and supplier, priced with the supplier country's labour cost, then landed in Brazil with freight and import duty (Mercosur origins duty-free). Calibrated against Comex Stat USD/kg by origin; premises are listed in [docs/assumptions.md](docs/assumptions.md).
 
 ## Limitations
 
