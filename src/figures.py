@@ -261,6 +261,44 @@ def kraljic_matrix(con) -> plt.Figure:
     return fig
 
 
+def tco_by_plant(con) -> plt.Figure:
+    from src.tco import pair_tco
+
+    since = con.execute(
+        "SELECT max(order_date) - INTERVAL 12 MONTH FROM purchase_orders"
+    ).fetchone()[0]
+    p = pair_tco(con, since)
+    spend = p["qty"] * p["price"]
+    parts = (
+        p.assign(
+            price_w=spend,
+            freight_duty=p["qty"] * (p["landed"] - p["price"]),
+            carrying_w=p["qty"] * p["carrying"],
+            quality_w=p["qty"] * p["quality"],
+        )
+        .groupby("country")[["price_w", "freight_duty", "carrying_w", "quality_w"]]
+        .sum()
+    )
+    shares = parts[["freight_duty", "carrying_w", "quality_w"]].div(parts["price_w"], axis=0)
+    shares = shares.loc[shares.sum(axis=1).sort_values().index]
+    fig, ax = plt.subplots(figsize=(8, 4))
+    shares.rename(
+        columns={
+            "freight_duty": "Freight and import duty",
+            "carrying_w": "Inventory carrying",
+            "quality_w": "Quality",
+        }
+    ).plot.barh(stacked=True, ax=ax, color=["tab:blue", "tab:orange", "tab:red"])
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
+    ax.set(
+        xlabel="Cost on top of the purchase price, last 12 months",
+        ylabel="Plant country",
+        title="Total cost of ownership above price, by plant country",
+    )
+    ax.legend(**LEGEND_BELOW)
+    return fig
+
+
 FIGURES = {
     "spend_by_family": spend_by_family,
     "abc_pareto": abc_pareto,
@@ -271,6 +309,7 @@ FIGURES = {
     "cost_tornado": cost_tornado,
     "clause_backtest": clause_backtest,
     "kraljic_matrix": kraljic_matrix,
+    "tco_by_plant": tco_by_plant,
 }
 
 

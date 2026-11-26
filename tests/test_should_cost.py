@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from src import should_cost as sc
-from src.generate.config import FAMILIES
+from src.generate.config import DEFAULT, FAMILIES
 
 SIMPLE = sc.FamilyPremise(
     family="test_harness",
@@ -64,7 +64,7 @@ def test_mass_per_unit_from_copper_share():
 
 def test_every_family_and_supplier_country_has_premises():
     assert {p.family for p in sc.FAMILY_PREMISES} == {f.name for f in FAMILIES}
-    for country in ("BR", "CN", "DE", "JP", "KR", "MX", "US"):
+    for country in DEFAULT.countries:  # every plant country the generator can produce
         assert country in sc.LABOR_USD_H
         assert country in sc.FREIGHT
 

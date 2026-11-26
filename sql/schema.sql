@@ -6,10 +6,14 @@
 CREATE TABLE IF NOT EXISTS suppliers (
     supplier_id    VARCHAR PRIMARY KEY,
     name           VARCHAR NOT NULL,
-    country        VARCHAR NOT NULL,        -- ISO 3166-1 alpha-2
+    country        VARCHAR NOT NULL,        -- plant country, ISO 3166-1 alpha-2: drives cost,
+                                            -- freight and import duty
     lead_time_days INTEGER NOT NULL CHECK (lead_time_days > 0),
-    ppm            DOUBLE  NOT NULL CHECK (ppm >= 0)  -- defective parts per million
+    ppm            DOUBLE  NOT NULL CHECK (ppm >= 0),  -- defective parts per million
+    hq_country     VARCHAR                  -- headquarters of the supplier group, for context
 );
+-- Databases created before hq_country existed get the column on the next setup.
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS hq_country VARCHAR;
 
 CREATE TABLE IF NOT EXISTS materials (
     material_id       VARCHAR PRIMARY KEY,
