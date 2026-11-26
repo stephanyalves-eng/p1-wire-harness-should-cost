@@ -1,6 +1,7 @@
 pandas
 duckdb
 matplotlib
+openpyxl
 jupyter
 ruff
 nbstripout

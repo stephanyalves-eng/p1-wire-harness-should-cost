@@ -38,7 +38,7 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ## Data
 
-- **Synthetic purchasing base** for a fictional automaker: 60 suppliers, 300 materials, about 5,500 purchase order lines over 24 months and 300 RFQs with 3 quotes each, about USD 53 M of spend per year. Prices are built bottom-up from copper, other material and conversion cost; three suppliers carry a hidden markup. Every assumption is listed in [docs/assumptions.md](docs/assumptions.md).
+- **Synthetic purchasing base** for a fictional automaker: 60 suppliers, 300 materials, about 5,500 purchase order lines over 24 months and 300 RFQs with 3 quotes each, about USD 55 M of spend per year. Prices are built bottom-up from the real copper price (World Bank Pink Sheet, lagged 3 months), other material and conversion cost; three suppliers carry a hidden markup. Every assumption is listed in [docs/assumptions.md](docs/assumptions.md).
 - Public sources and extraction dates are logged in [data/README.md](data/README.md).
 
 ## Method
@@ -54,6 +54,7 @@ python -m venv .venv
 source .venv/Scripts/activate   # Windows Git Bash; use .venv/bin/activate on macOS/Linux
 pip install -r requirements.txt
 nbstripout --install            # once per clone: strips notebook outputs on commit
+python -m src.data.download_pinksheet   # loads the copper series into copper_monthly
 python -m src.generate.purchasing   # builds data/processed/purchasing.duckdb
 ```
 
