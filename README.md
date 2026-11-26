@@ -24,15 +24,15 @@ What target price and sourcing strategy should a fictional automaker use for wir
 
 **Scope of the category**
 
-| NCM | Official description (Comex Stat) | Statistical unit |
-|---|---|---|
-| 8544.30.00 | Jogos de fios para velas de ignição e outros jogos de fios dos tipos utilizados em quaisquer veículos | kg (net) |
-| 8536.69.10 | Tomada polarizada e tomada blindada, para uma tensão não superior a 1.000 V | units |
-| 8536.69.90 | Outras tomadas de corrente, para uma tensão não superior a 1.000 V | units |
+| NCM | Official description (Comex Stat) | Statistical unit | Import duty (II) |
+|---|---|---|---|
+| 8544.30.00 | Jogos de fios para velas de ignição e outros jogos de fios dos tipos utilizados em quaisquer veículos | kg (net) | 16.0% |
+| 8536.69.10 | Tomada polarizada e tomada blindada, para uma tensão não superior a 1.000 V | units | 14.4% |
+| 8536.69.90 | Outras tomadas de corrente, para uma tensão não superior a 1.000 V | units | 16.0% |
 
 Connectors are counted in units, not kilograms, so the market analysis reports USD/kg for harnesses and both USD/kg (from net weight) and USD/unit for connectors.
 
-Import duty (II) for each code: **to be confirmed in the TEC in force** (Resolução Gecex nº 272 and amendments), including the exception lists.
+Import duty rates are the reference TEC rates consulted on 2026-11-26 and are applied to imported supplies in the should-cost and TCO. They are kept in [data/reference/import_duty.csv](data/reference/import_duty.csv).
 
 ## Result
 
