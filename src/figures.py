@@ -202,6 +202,30 @@ def cost_tornado(con) -> plt.Figure:
     return fig
 
 
+def clause_backtest(con) -> plt.Figure:
+    from src.clause import DESIGNS, LABELS, backtest
+    from src.should_cost import BY_FAMILY
+
+    copper = _q(con, "SELECT month, copper_usd_t FROM copper_monthly ORDER BY month")
+    copper = copper.set_index(pd.to_datetime(copper["month"]))["copper_usd_t"]
+    # First January with the history every design needs (December and the previous quarter).
+    first = copper.index.min()
+    year = max(2016, first.year + 1 if first.month <= 10 else first.year + 2)
+    result = backtest(copper, BY_FAMILY["harness_body"], "BR", start=f"{year}-01-01")
+    fig, (top, bottom) = plt.subplots(2, 1, figsize=(9, 6.5), sharex=True)
+    for d in DESIGNS:
+        top.plot(result.prices[d], label=LABELS[d], lw=1.4 if d == "fixed_annual" else 1.1)
+        yearly = result.margins[d].groupby(result.margins.index.year).mean()
+        bottom.plot(pd.to_datetime(yearly.index.astype(str) + "-07-01"), yearly, marker="o")
+    top.set(ylabel="Contract price, USD", title="Body harness made in Brazil: four copper clauses")
+    bottom.axhline(0, color="black", lw=0.8)
+    bottom.yaxis.set_major_formatter(mtick.PercentFormatter(1))
+    bottom.set(ylabel="Supplier margin on price", title="Supplier margin, yearly average")
+    top.legend(fontsize=8, ncol=2, frameon=False)
+    fig.tight_layout()
+    return fig
+
+
 FIGURES = {
     "spend_by_family": spend_by_family,
     "abc_pareto": abc_pareto,
@@ -210,6 +234,7 @@ FIGURES = {
     "should_cost_calibration": should_cost_calibration,
     "supplier_gap": supplier_gap,
     "cost_tornado": cost_tornado,
+    "clause_backtest": clause_backtest,
 }
 
 
