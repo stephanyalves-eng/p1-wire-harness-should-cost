@@ -36,6 +36,23 @@ Import duty rates are the reference TEC rates consulted on 2026-11-26 and are ap
 
 ## Result
 
+*Status: v0.1, spend baseline and market intelligence. The should-cost model, clause backtest and recommendations come in v1.0.*
+
+**Spend baseline (synthetic base, about USD 55 M per year).** Harnesses take 78% of spend; body harnesses alone are 21%. 114 of 300 materials (38%) make up 80% of spend, and single-source items are 20% of materials but 26% of spend.
+
+![Annual spend by part family](reports/figures/spend_by_family.png)
+![ABC Pareto](reports/figures/abc_pareto.png)
+
+**Market (real Comex Stat imports, 2019–2026).** Harness imports cost about USD 30/kg in 2025–2026, up from USD 25.6/kg in 2019. Month to month, import prices barely follow copper, so the should-cost will take copper pass-through from its cost tree rather than from market correlation. The April 2020 spike is a low-volume pandemic month.
+
+![Harness import price vs. copper](reports/figures/harness_price_vs_copper.png)
+
+**Origin risk.** Harness imports are highly concentrated, with Paraguay supplying 46–58% of value every year; shielded connectors depend on China for about 60%.
+
+![Concentration of import origins](reports/figures/origin_hhi.png)
+
+Figures are regenerated from the database with `python -m src.figures`.
+
 ## Data
 
 - **Synthetic purchasing base** for a fictional automaker: 60 suppliers, 300 materials, about 5,500 purchase order lines over 24 months and 300 RFQs with 3 quotes each, about USD 55 M of spend per year. Prices are built bottom-up from the real copper price (World Bank Pink Sheet, lagged 3 months), other material and conversion cost; three suppliers carry a hidden markup. Every assumption is listed in [docs/assumptions.md](docs/assumptions.md).
