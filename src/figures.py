@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import pandas as pd
 
+from src import brand
 from src.db import DEFAULT_DB, ROOT, connect, create_schema
 
 OUT_DIR = ROOT / "reports" / "figures"
@@ -46,7 +47,9 @@ def spend_by_family(con) -> plt.Figure:
         """,
     )
     fig, ax = plt.subplots(figsize=(8, 4))
-    ax.barh(df["family"].str.replace("_", " "), df["per_year"] / 1e6, color="tab:blue")
+    ax.barh(df["family"].str.replace("_", " "), df["per_year"] / 1e6, color=brand.CAT[1])
+    ax.grid(axis="x")
+    ax.grid(axis="y", visible=False)
     ax.set(xlabel="USD million per year", title="Annual spend by part family (synthetic base)")
     return fig
 
@@ -54,9 +57,9 @@ def spend_by_family(con) -> plt.Figure:
 def abc_pareto(con) -> plt.Figure:
     df = _q(con, "SELECT rank, cum_share, abc_class FROM v_abc ORDER BY rank")
     fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot(df["rank"] / len(df), df["cum_share"], color="tab:blue")
+    ax.plot(df["rank"] / len(df), df["cum_share"], color=brand.CAT[1])
     for cut in (0.80, 0.95):
-        ax.axhline(cut, ls="--", lw=0.8, color="grey")
+        ax.axhline(cut, ls="--", lw=0.8, color=brand.AXIS)
     counts = df["abc_class"].value_counts().sort_index()
     ax.text(
         0.98,
@@ -86,11 +89,15 @@ def harness_price_vs_copper(con) -> plt.Figure:
     copper = copper[copper.index >= price.index.min()]
 
     fig, ax = plt.subplots(figsize=(9, 3.8))
-    ax.plot(price, color="tab:blue", alpha=0.35, label="Harness USD/kg, monthly")
-    ax.plot(price.rolling(12).mean(), color="tab:blue", label="Harness USD/kg, 12-month mean")
+    ax.plot(price, color=brand.CAT[2], lw=1, label="Harness USD/kg, monthly")
+    ax.plot(
+        price.rolling(12).mean(), color=brand.CAT[1], lw=2, label="Harness USD/kg, 12-month mean"
+    )
     ax.set_ylabel("Harness import price, USD/kg")
     ax2 = ax.twinx()
-    ax2.plot(copper, color="tab:orange", label="Copper USD/kg (World Bank)")
+    ax2.plot(copper, color=brand.CAT[4], label="Copper USD/kg (World Bank)")
+    ax2.grid(False)
+    ax2.spines["right"].set_visible(True)
     ax2.set_ylabel("Copper, USD/kg")
     fig.legend(loc="upper center", bbox_to_anchor=(0.5, 0.0), ncol=3, fontsize=8, frameon=False)
     ax.set_title("Harness import price (Comex Stat, NCM 8544.30.00) vs. copper")
@@ -99,12 +106,14 @@ def harness_price_vs_copper(con) -> plt.Figure:
 
 def origin_hhi(con) -> plt.Figure:
     df = _q(con, "SELECT ncm, year, hhi FROM v_market_hhi ORDER BY ncm, year")
-    wide = df.pivot(index="year", columns="ncm", values="hhi").rename(columns=NCM_NAMES)
+    wide = df.pivot(index="year", columns="ncm", values="hhi")
+    wide = wide[sorted(wide.columns, reverse=True)].rename(columns=NCM_NAMES)  # harnesses first
     fig, ax = plt.subplots(figsize=(9, 3.8))
     wide.plot(ax=ax, marker="o")
+    ax.grid(axis="x", visible=False)
     for cut, label in ((1500, "moderate"), (2500, "high")):
-        ax.axhline(cut, ls="--", lw=0.8, color="grey")
-        ax.text(wide.index.min(), cut + 40, label, fontsize=8, color="grey")
+        ax.axhline(cut, ls="--", lw=0.8, color=brand.AXIS)
+        ax.text(wide.index.min(), cut + 40, label, fontsize=8, color=brand.AXIS)
     ax.set(xlabel="", ylabel="HHI (0–10,000)", title="Concentration of import origins")
     ax.legend(**LEGEND_BELOW)
     return fig
@@ -116,9 +125,19 @@ def should_cost_calibration(con) -> plt.Figure:
     x = range(len(calib))
     fig, ax = plt.subplots(figsize=(9, 3.8))
     ax.bar(
-        [i - 0.2 for i in x], calib["import_usd_kg"], width=0.4, label="Import price (Comex Stat)"
+        [i - 0.2 for i in x],
+        calib["import_usd_kg"],
+        width=0.4,
+        color=brand.CAT[2],
+        label="Import price (Comex Stat)",
     )
-    ax.bar([i + 0.2 for i in x], calib["should_cost_usd_kg"], width=0.4, label="Should-cost")
+    ax.bar(
+        [i + 0.2 for i in x],
+        calib["should_cost_usd_kg"],
+        width=0.4,
+        color=brand.CAT[1],
+        label="Should-cost",
+    )
     ax.set_xticks(list(x), calib["origin"], rotation=0, fontsize=8)
     ax.set(
         ylabel="USD/kg",
@@ -163,10 +182,12 @@ def supplier_gap(con) -> plt.Figure:
     from src.gap import MATERIALITY, supplier_gaps
 
     g = supplier_gaps(con).head(15).iloc[::-1]
-    colors = ["tab:red" if f else "tab:grey" for f in g["flagged"]]
+    colors = [brand.UNFAVORABLE if f else brand.CONTEXT for f in g["flagged"]]
     fig, ax = plt.subplots(figsize=(8, 4.5))
     ax.barh(g["supplier_id"] + " (" + g["country"] + ")", g["gap"], color=colors)
-    ax.axvline(MATERIALITY, ls="--", lw=0.8, color="black")
+    ax.grid(axis="x")
+    ax.grid(axis="y", visible=False)
+    ax.axvline(MATERIALITY, ls="--", lw=0.8, color=brand.TARGET)
     ax.text(MATERIALITY, len(g) - 0.45, " 10% materiality", fontsize=8, va="bottom")
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
     ax.set(
@@ -188,9 +209,11 @@ def cost_tornado(con) -> plt.Figure:
     t = tornado(BY_FAMILY["harness_body"], copper, "BR").iloc[::-1]
     base = t["base"].iloc[0]
     fig, ax = plt.subplots(figsize=(8, 4))
-    ax.barh(t["driver"], t["low"] / base - 1, color="tab:green", label="driver down")
-    ax.barh(t["driver"], t["high"] / base - 1, color="tab:red", label="driver up")
-    ax.axvline(0, color="black", lw=0.8)
+    ax.barh(t["driver"], t["low"] / base - 1, color=brand.FAVORABLE, label="driver down")
+    ax.barh(t["driver"], t["high"] / base - 1, color=brand.UNFAVORABLE, label="driver up")
+    ax.grid(axis="x")
+    ax.grid(axis="y", visible=False)
+    ax.axvline(0, color=brand.BASELINE, lw=1)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
     ax.set(
         xlabel="Change in should-cost",
@@ -218,7 +241,7 @@ def clause_backtest(con) -> plt.Figure:
         yearly = result.margins[d].groupby(result.margins.index.year).mean()
         bottom.plot(pd.to_datetime(yearly.index.astype(str) + "-07-01"), yearly, marker="o")
     top.set(ylabel="Contract price, USD", title="Body harness made in Brazil: four copper clauses")
-    bottom.axhline(0, color="black", lw=0.8)
+    bottom.axhline(0, color=brand.BASELINE, lw=1)
     bottom.yaxis.set_major_formatter(mtick.PercentFormatter(1))
     bottom.set(ylabel="Supplier margin on price", title="Supplier margin, yearly average")
     top.legend(fontsize=8, ncol=2, frameon=False)
@@ -231,10 +254,10 @@ def kraljic_matrix(con) -> plt.Figure:
 
     m = material_risk(con)
     colors = {
-        "strategic": "tab:red",
-        "leverage": "tab:blue",
-        "bottleneck": "tab:orange",
-        "non_critical": "tab:grey",
+        "strategic": brand.CAT[1],
+        "leverage": brand.CAT[3],
+        "bottleneck": brand.CAT[4],
+        "non_critical": brand.CAT[2],
     }
     fig, ax = plt.subplots(figsize=(8.5, 5))
     for q, g in m.groupby("quadrant"):
@@ -248,8 +271,8 @@ def kraljic_matrix(con) -> plt.Figure:
             label=f"{LABELS[q]}: {len(g)} items, {share:.0%} of spend",
         )
     a_cut = m.loc[m["abc_class"] == "A", "spend_share"].min()
-    ax.axvline(a_cut, ls="--", lw=0.8, color="black")
-    ax.axhline(RISK_THRESHOLD, ls="--", lw=0.8, color="black")
+    ax.axvline(a_cut, ls="--", lw=0.8, color=brand.TARGET)
+    ax.axhline(RISK_THRESHOLD, ls="--", lw=0.8, color=brand.TARGET)
     ax.set_xscale("log")
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1, decimals=2))
     ax.set(
@@ -288,7 +311,9 @@ def tco_by_plant(con) -> plt.Figure:
             "carrying_w": "Inventory carrying",
             "quality_w": "Quality",
         }
-    ).plot.barh(stacked=True, ax=ax, color=["tab:blue", "tab:orange", "tab:red"])
+    ).plot.barh(stacked=True, ax=ax, color=[brand.CAT[1], brand.CAT[2], brand.CAT[4]])
+    ax.grid(axis="x")
+    ax.grid(axis="y", visible=False)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
     ax.set(
         xlabel="Cost on top of the purchase price, last 12 months",
@@ -317,9 +342,12 @@ def render_all(con: duckdb.DuckDBPyConnection, out_dir: Path = OUT_DIR) -> list[
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     for name, build in FIGURES.items():
-        fig = build(con)
-        path = out_dir / f"{name}.png"
-        fig.savefig(path, dpi=120, bbox_inches="tight", metadata={"Software": None})
+        with brand.style():
+            fig = build(con)
+            for ax in fig.axes:
+                brand.mono_ticks(ax)
+            path = out_dir / f"{name}.png"
+            fig.savefig(path, dpi=150, bbox_inches="tight", metadata={"Software": None})
         plt.close(fig)
         paths.append(path)
     return paths

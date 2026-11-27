@@ -93,7 +93,7 @@ A fixed annual price gives the buyer a certain budget and the lowest total cost,
 
 **Negotiation playbook** ([reports/negotiation_playbook.md](reports/negotiation_playbook.md)). For each flagged supplier: position, BATNA (the lowest-TCO alternative for its items), the zone of possible agreement from the supplier's floor (its cost without margin) to the buyer's walk-away (the price at which switching becomes cheaper), an opening offer and the concessions to trade. S003 (German group, plant in Morocco) has a real zone, from 19% to 8% below today's price: aim at should-cost, 13% below. For S027 the alternatives already beat should-cost, so the aim is the walk-away, 16% below. For the two Japanese plants, S023 and S006, there is no zone at all: the alternatives' TCO sits below anything they could accept, so the plan is to move volume in stages and ask for should-cost only to bridge the transition.
 
-Figures are regenerated from the database with `python -m src.figures`.
+Figures are regenerated from the database with `python -m src.figures`, in the colours and type of the Stephany Alves Design System (`src/brand.py`; IBM Plex Sans and Mono, with system fallbacks when they are not installed).
 
 ## Data
 
